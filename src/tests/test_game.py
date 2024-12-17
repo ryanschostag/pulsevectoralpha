@@ -2,7 +2,7 @@
 Test module for src/game.py
 '''
 import pytest
-import game
+from src import game
 
 
 def test_run():
@@ -10,4 +10,5 @@ def test_run():
 	Tests the run function
 	'''
 	session = game.Game()
-	
+	assert session.running is True
+
