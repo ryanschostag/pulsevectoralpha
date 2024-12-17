@@ -12,9 +12,10 @@ from utils import *
 from enemy import *
 from spaceship import *
 from racing_mode import *
+import settings
 
-FLAME_SCALE = 2
-MAX_FLAME_LENGTH = 256
+FLAME_SCALE = settings.game.flame_scale
+MAX_FLAME_LENGTH = settings.game.max_flame_length
 
 class Game:
     def __init__(self):
@@ -22,7 +23,7 @@ class Game:
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN if FULLSCREEN else 0)
         pygame.display.set_caption("Pulse Vector")
         self.clock = pygame.time.Clock()
-        self.running = True
+        self.running = settings.game.default_running_state
         self.player = Player()
         self.stars = [
             Star(
@@ -33,13 +34,13 @@ class Game:
         ]
         self.target_star = None
         self.bullets = []
-        self.enemy_total = 16
+        self.enemy_total = settings.game.enemy_total
         self.enemies = []
         for _ in range(self.enemy_total):
             enemy = TypeDEnemy(self.stars, self.enemies)
             self.enemies.append(enemy)
         self.last_shot_time = 0
-        self.fire_delay = 250
+        self.fire_delay = settings.game.fire_delay
 
         pygame.event.set_allowed([
             pygame.QUIT,
@@ -57,8 +58,8 @@ class Game:
         self.tag_timer = 0  # Timer to track player proximity for tagging
         self.race = None 
         self.lock_timer = 0
-        self.lock_on_duration = 1.0  # 1 second required to lock on
-        self.lock_indicator_color = (0, 255, 0)  # Green color for lock-on
+        self.lock_on_duration = settings.game.lock_on_duration
+        self.lock_indicator_color = settings.game.lock_indicator_color
 
     def cycle_target_enemy(self, forward=True):
         """Cycles the target_enemy_index to the next enemy."""
