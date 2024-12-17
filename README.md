@@ -1,5 +1,7 @@
 # Pulse Vector
 
+![Gameplay Preview](pulse_vector.gif)
+
 ## 🎮 **Controls**
 | **Key**         | **Action**                            |
 |-----------------|---------------------------------------|
