@@ -60,6 +60,10 @@ class Game:
         self.lock_timer = 0
         self.lock_on_duration = settings.game.lock_on_duration
         self.lock_indicator_color = settings.game.lock_indicator_color
+        self.health_bar_width = settings.game.health_bar_width
+        self.health_bar_height = settings.game.health_bar_height
+        self.health_bar_x = settings.game.health_bar_x
+        self.health_bar_y = settings.game.health_bar_y
 
     def cycle_target_enemy(self, forward=True):
         """Cycles the target_enemy_index to the next enemy."""
@@ -87,10 +91,10 @@ class Game:
 
         # 1. **Player Health Bar (Top-Left)**
         player_health_ratio = self.player.health / self.player.max_health
-        health_bar_width = 200
-        health_bar_height = 20
-        health_bar_x = 10
-        health_bar_y = 10
+        health_bar_width = self.health_bar_width
+        health_bar_height = self.health_bar_height
+        health_bar_x = self.health_bar_x
+        health_bar_y = self.health_bar_y
 
         # Draw the border of the health bar
         pygame.draw.rect(self.screen, (255, 0, 0), 
