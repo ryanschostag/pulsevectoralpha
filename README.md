@@ -14,4 +14,5 @@
 | `ESC` or `QUIT` | Exit Game                            |
 
 > **Note**: The game supports both manual movement using `WASD` keys and an **Auto-Follow** system for tagged enemies.
+> 
 > But you will need to catch them first.
