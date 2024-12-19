@@ -2,6 +2,7 @@
 
 import pygame
 import random
+from collections import defaultdict
 from pygame.math import Vector2
 import math
 from constants import *
@@ -140,18 +141,11 @@ class Game:
         self.autofollow_status_bottom_left(font)
         self.lock_on_status_bottom_center(font)
 
-    def draw_scene(self):
-        """
-        Implements a precise depth-based rendering system that correctly interleaves
-        world objects based on their distance from the viewer.
-        """
-        self.screen.fill((0, 0, 0))
-
-        # Unified collection for all world objects
+    def add_all_world_objects(self, player_depth:float) -> list:
+        '''
+        Add all world objects with consistent depth values
+        '''
         world_objects = []
-        player_depth = self.player.depth  # Get the player's current depth
-
-        # Add all world objects with consistent depth values
         for star in self.stars:
             world_objects.append({
                 'depth': star.depth,
@@ -167,24 +161,55 @@ class Game:
                 'type': 'enemy'
             })
 
-        # Separate bullets into "far" and "shallow" based on player depth
-        far_bullets = []
-        shallow_bullets = []
+        return world_objects
+
+    def split_bullets_into_far_or_shallow(self, player_depth:float) -> dict[list]:
+        '''
+        Separate bullets into "far" and "shallow" based on player depth
+        '''
+        bullets = defaultdict(list)
         for bullet in self.bullets:
             if bullet.depth > player_depth:
-                far_bullets.append({
+                bullets['far'].append({
                     'depth': bullet.depth,
                     'object': bullet,
                     'type': 'bullet'
                 })
             else:
-                shallow_bullets.append({
+                bullets['shallow'].append({
                     'depth': bullet.depth,
                     'object': bullet,
                     'type': 'bullet'
                 })
 
-        # Sort by depth (ascending) - this ensures furthest objects draw first
+        return bullets
+
+    def draw_progress_bar(self, obj, circle_radius) -> None:
+        '''
+        Draws the progress bar
+        '''
+        progress_ratio = self.tag_timer / 1000.0  # Assuming tag_timer is in milliseconds
+        progress_ratio = min(max(progress_ratio, 0.0), 1.0)  # Clamp between 0 and 1
+        start_angle = -math.pi / 2  # Start at the top
+        end_angle = start_angle + (2 * math.pi * progress_ratio)
+        pygame.draw.arc(
+            self.screen,
+            (0, 255, 0),  # Green color for progress
+            [
+                int(obj.position.x - circle_radius),
+                int(obj.position.y - circle_radius),
+                int(circle_radius * 2),
+                int(circle_radius * 2)
+            ],
+            start_angle,
+            end_angle,
+            4  # Thickness of the arc
+        )
+
+    def sort_by_depth_ascending(self, world_objects:list) -> list:
+        '''
+        Sort by depth (ascending) - this ensures furthest objects draw first
+        '''
         world_objects.sort(key=lambda x: x['depth'])
         for obj_info in world_objects:
             obj = obj_info['object']
@@ -214,23 +239,25 @@ class Game:
 
                         # Draw progress bar if within proximity
                         if distance_to_target <= circle_radius:
-                            progress_ratio = self.tag_timer / 1000.0  # Assuming tag_timer is in milliseconds
-                            progress_ratio = min(max(progress_ratio, 0.0), 1.0)  # Clamp between 0 and 1
-                            start_angle = -math.pi / 2  # Start at the top
-                            end_angle = start_angle + (2 * math.pi * progress_ratio)
-                            pygame.draw.arc(
-                                self.screen,
-                                (0, 255, 0),  # Green color for progress
-                                [
-                                    int(obj.position.x - circle_radius),
-                                    int(obj.position.y - circle_radius),
-                                    int(circle_radius * 2),
-                                    int(circle_radius * 2)
-                                ],
-                                start_angle,
-                                end_angle,
-                                4  # Thickness of the arc
-                            )
+                            self.draw_progress_bar(obj, circle_radius)
+        return world_objects
+
+    def draw_scene(self):
+        """
+        Implements a precise depth-based rendering system that correctly interleaves
+        world objects based on their distance from the viewer.
+        """
+        self.screen.fill((0, 0, 0))
+
+        # Unified collection for all world objects
+        player_depth = self.player.depth  # Get the player's current depth
+
+        world_objects = self.add_all_world_objects(player_depth)
+        bullet_data = self.split_bullets_into_far_or_shallow(player_depth)
+        far_bullets = bullet_data['far']
+        shallow_bullets = bullet_data['shallow']
+
+        world_objects = self.sort_by_depth_ascending(world_objects)
 
         self.draw_hud()  # Draw the HUD
 
@@ -242,38 +269,6 @@ class Game:
         for obj_info in reversed(far_bullets):  # Reverse to draw background first
             obj = obj_info['object']
             obj.draw(self.screen)
-            '''
-            bullet_hitbox_radius = obj.get_collision_radius()
-            bullet_hitbox_rect = pygame.Rect(
-                bullet.position.x - bullet_hitbox_radius,
-                bullet.position.y - bullet_hitbox_radius,
-                bullet_hitbox_radius * 2,
-                bullet_hitbox_radius * 2
-            )
-            
-            # Draw bullet's hitbox (default yellow)
-            bullet_hitbox_color = (255, 255, 0)
-
-            # Calculate player's hitbox
-            player_radius = 5
-            player_hitbox_rect = pygame.Rect(
-                (WIDTH // 2) - player_radius, 
-                (HEIGHT // 2) - player_radius, 
-                player_radius * 2, 
-                player_radius * 2
-            )
-            
-            # Check for intersection of bullet and player hitboxes
-            if player_hitbox_rect.colliderect(bullet_hitbox_rect):
-                # Check if the depths are within range
-                depth_difference = abs(self.player.depth - obj.depth)
-                if depth_difference < BULLET_DEPTH_HIT_TOLERANCE:  # Check if bullet is within hit depth
-                    bullet_hitbox_color = (255, 255, 0)  # Change bullet hitbox color to yellow
-                    player_hitbox_color = (255, 255, 0)  # Change player hitbox color to yellow
-                    
-            pygame.draw.rect(self.screen, bullet_hitbox_color, bullet_hitbox_rect, 2)  # Draw bullet hitbox
-            '''
-            pass
 
         # Draw all world objects (e.g., stars, enemies)
         for obj_info in reversed(world_objects):  # Reverse to draw background first
@@ -301,24 +296,6 @@ class Game:
         spaceship_position = ((WIDTH - spaceship_width) // 2, (HEIGHT - spaceship_height) // 2)
 
         draw_spaceship(self.screen, spaceship_shape, spaceship_position)
-        '''debug stuff
-        # Draw player hitbox
-        player_radius = 14
-        player_hitbox_rect = pygame.Rect(
-            (WIDTH // 2) - player_radius, 
-            (HEIGHT // 2) - player_radius, 
-            player_radius * 2, 
-            player_radius * 2
-        )
-        pygame.draw.rect(self.screen, player_hitbox_color, player_hitbox_rect, 2)  # Draw player hitbox
-        '''
-        # Draw player depth below player ship
-        #font = pygame.font.SysFont(None, 24)
-        #depth_text = f"Depth: {self.player.depth:.2f}, x:{self.player.position}"
-        #depth_surface = font.render(depth_text, True, (255, 255, 255))
-        #depth_x = WIDTH // 2 - depth_surface.get_width() // 2
-        #depth_y = HEIGHT // 2 + player_radius + 10
-        #self.screen.blit(depth_surface, (depth_x, depth_y))
 
         # Draw flame if not in "outward" scroll mode (AFTER ship)
         if self.player.scroll_mode != 'outward':
@@ -330,29 +307,7 @@ class Game:
         for obj_info in reversed(shallow_bullets):  # Reverse to draw background first
             obj = obj_info['object']
             obj.draw(self.screen)
-            '''
-            bullet_hitbox_radius = obj.get_collision_radius()
-            bullet_hitbox_rect = pygame.Rect(
-                bullet.position.x - bullet_hitbox_radius,
-                bullet.position.y - bullet_hitbox_radius,
-                bullet_hitbox_radius * 2,
-                bullet_hitbox_radius * 2
-            )
 
-            # Draw bullet hitbox (yellow for visibility)
-            bullet_hitbox_color = (255, 255, 0)
-            pygame.draw.rect(self.screen, bullet_hitbox_color, bullet_hitbox_rect, 2)
-        
-            if player_hitbox_rect.colliderect(bullet_hitbox_rect):
-                depth_difference = abs(self.player.depth - obj.depth)
-                if depth_difference < BULLET_DEPTH_HIT_TOLERANCE:
-                    bullet_hitbox_color = (255, 255, 0)
-                    player_hitbox_color = (255, 255, 0)
-
-            #pygame.draw.rect(self.screen, bullet_hitbox_color, bullet_hitbox_rect, 2)  # Draw bullet hitbox
-            '''
-            pass
-        
     def handle_mouse_click(self, position):
         """
         Handles mouse clicks to select a target star.
