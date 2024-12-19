@@ -85,38 +85,31 @@ class Game:
         self.target_star = None  # Clear any star target
         print(f"Target enemy set to {self.target_enemy}. Auto-Follow remains {'ON' if self.player.auto_follow_active else 'OFF'}.")
 
-    def draw_hud(self):
-        """Draws the game's HUD including player health, enemy status, and auto-follow status."""
-        font = pygame.font.SysFont(None, 36)  # Font for the HUD text
-
-        # 1. **Player Health Bar (Top-Left)**
+    def draw_player_health_bar_top_left(self, font:pygame.font.Font) -> None:
+        '''
+        1. **Player Health Bar (Top-Left)**
+        '''
         player_health_ratio = self.player.health / self.player.max_health
-        health_bar_width = self.health_bar_width
-        health_bar_height = self.health_bar_height
-        health_bar_x = self.health_bar_x
-        health_bar_y = self.health_bar_y
-
-        # Draw the border of the health bar
-        pygame.draw.rect(self.screen, (255, 0, 0), 
-                         (health_bar_x, health_bar_y, health_bar_width, health_bar_height))  # Red border
 
         # Draw the actual health amount inside the bar
         pygame.draw.rect(self.screen, (0, 255, 0), 
-                         (health_bar_x, health_bar_y, int(health_bar_width * player_health_ratio), health_bar_height))  # Green fill
+                         (self.health_bar_x, self.health_bar_y, int(self.health_bar_width * player_health_ratio), self.health_bar_height))  # Green fill
 
         # Display player's health as text
         player_health_text = f"Health: {self.player.health} / {self.player.max_health}"
         health_text_surface = font.render(player_health_text, True, (255, 255, 255))  # White text
-        self.screen.blit(health_text_surface, (health_bar_x, health_bar_y + health_bar_height + 5))  # Slightly below health bar
+        self.screen.blit(health_text_surface, (self.health_bar_x, self.health_bar_y + self.health_bar_height + 5))  # Slightly below health bar
 
-        # 2. **Tagged Enemies Count (Top-Center)**
+    def tagged_enemies_count(self, font:pygame.font.Font):
+        ''' 2. **Tagged Enemies Count (Top-Center)** '''
         tagged_count = len(self.tagged_enemies)
         total_enemies = len(self.enemies)
         tagged_text = f"Tagged Enemies: {tagged_count} / {total_enemies}"
         tagged_text_surface = font.render(tagged_text, True, (255, 255, 255))  # White text
         self.screen.blit(tagged_text_surface, (WIDTH // 2 - tagged_text_surface.get_width() // 2, 10))  # Centered at the top
 
-        # 3. **Auto-Follow Status (Bottom-Left)**
+    def autofollow_status_bottom_left(self, font:pygame.font.Font):
+        ''' 3. **Auto-Follow Status (Bottom-Left)** '''
         if self.player.auto_follow_active and isinstance(self.player.auto_follow_target, TypeDEnemy):
             follow_text = "Auto-pilot: ON"
             follow_color = (0, 255, 0)  # Green
@@ -127,7 +120,8 @@ class Game:
         follow_surface = font.render(follow_text, True, follow_color)
         self.screen.blit(follow_surface, (10, HEIGHT - 50))  # Bottom-left corner
 
-        # 4. **Lock-On Status (Bottom-Center)**
+    def lock_on_status_bottom_center(self, font:pygame.font.Font):
+        ''' 4. **Lock-On Status (Bottom-Center)** '''
         if self.target_enemy is not None:
             lock_status_text = f"Target: {self.target_enemy.type}"
             lock_status_color = (0, 255, 0)  # Green if locked on
@@ -137,6 +131,14 @@ class Game:
 
         lock_status_surface = font.render(lock_status_text, True, lock_status_color)
         self.screen.blit(lock_status_surface, (WIDTH // 2 - lock_status_surface.get_width() // 2, HEIGHT - 50))  # Bottom-center
+
+    def draw_hud(self):
+        """Draws the game's HUD including player health, enemy status, and auto-follow status."""
+        font = pygame.font.SysFont(None, 36)  # Font for the HUD text
+        self.draw_player_health_bar_top_left(font)
+        self.tagged_enemies_count(font)
+        self.autofollow_status_bottom_left(font)
+        self.lock_on_status_bottom_center(font)
 
     def draw_scene(self):
         """
@@ -182,7 +184,7 @@ class Game:
                     'type': 'bullet'
                 })
 
-     # Sort by depth (ascending) - this ensures furthest objects draw first
+        # Sort by depth (ascending) - this ensures furthest objects draw first
         world_objects.sort(key=lambda x: x['depth'])
         for obj_info in world_objects:
             obj = obj_info['object']
